@@ -1,0 +1,11 @@
+{
+  "CB-DEMO-7KQ2-P9MX-4RVT": {
+    "note": "Demo activation key - 3 days from first activation",
+    "days": 3,
+    "maxDevices": 1,
+    "devices": [],
+    "revoked": false,
+    "expiresAt": null,
+    "created": 0
+  }
+}

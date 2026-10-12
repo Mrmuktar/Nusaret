@@ -1,0 +1,35 @@
+<!doctype html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CB Traders Admin</title>
+<style>
+:root{--bg:#0a1224;--card:#101b34;--line:#1d4d73;--blue:#1aa3ff;--txt:#e6f1ff;--mut:#8aa0ba}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font-family:Segoe UI,Roboto,Arial,sans-serif;padding:16px}
+h1{font-size:20px;letter-spacing:1px}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px;max-width:900px;margin-inline:auto}
+input,button{padding:12px;border-radius:10px;border:1px solid var(--line);background:#060b17;color:var(--txt);font-size:15px}
+button{background:var(--blue);border:0;font-weight:700;cursor:pointer;color:#001}button.s{background:#22314d;color:var(--txt);padding:7px 10px;font-size:13px}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row input{flex:1;min-width:110px}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:8px 4px;border-bottom:1px solid #16304a;text-align:left}
+code{color:#25b8ff;font-size:14px}.bad{color:#ff5566}.good{color:#22d37a}.w{overflow-x:auto}
+</style></head><body>
+<div class="card" id="login"><h1>🔐 CB TRADERS ADMIN</h1><div class="row"><input id="pw" type="password" placeholder="Admin password"><button onclick="login()">Login</button></div></div>
+<div id="app" hidden>
+<div class="card"><h1>নতুন Key তৈরি</h1><div class="row">
+<input id="note" placeholder="Note / ইউজারের নাম"><input id="days" type="number" placeholder="মেয়াদ (দিন, 0=আজীবন)" value="30">
+<input id="dev" type="number" placeholder="Max device" value="1"><input id="cnt" type="number" placeholder="কয়টা" value="1"><button onclick="create()">Generate</button></div>
+<pre id="out" style="color:#22d37a;white-space:pre-wrap"></pre></div>
+<div class="card w"><h1>সব Keys <button class="s" onclick="load()">↻</button></h1><table><thead><tr><th>Key</th><th>Note</th><th>Status</th><th>Expiry</th><th>Dev</th><th></th></tr></thead><tbody id="tb"></tbody></table></div></div>
+<script>
+let T=localStorage.cbt||"";const $=id=>document.getElementById(id);
+const api=(p,b)=>fetch("/admin/api/"+p,{method:b?"POST":"GET",headers:{"x-admin-token":T,"Content-Type":"application/json"},body:b?JSON.stringify(b):undefined}).then(r=>r.json());
+async function login(){T=$("pw").value;const r=await api("keys");if(r.error){alert("Wrong password");return}localStorage.cbt=T;init(r)}
+function init(db){$("login").hidden=true;$("app").hidden=false;render(db)}
+async function load(){render(await api("keys"))}
+function render(db){const tb=$("tb");tb.innerHTML="";Object.entries(db).reverse().forEach(([k,v])=>{
+const exp=v.expiresAt?new Date(v.expiresAt).toLocaleDateString():(v.days?"inactive ("+v.days+"d)":"Lifetime");
+const st=v.revoked?'<span class=bad>Revoked</span>':(v.expiresAt&&Date.now()>v.expiresAt?'<span class=bad>Expired</span>':'<span class=good>Active</span>');
+const tr=document.createElement("tr");tr.innerHTML=`<td><code>${k}</code></td><td>${esc(v.note)}</td><td>${st}</td><td>${exp}</td><td>${v.devices.length}/${v.maxDevices}</td><td></td>`;
+const td=tr.lastChild;[["Copy",()=>navigator.clipboard.writeText(k)],[v.revoked?"Unrevoke":"Revoke",()=>act("revoke",k)],["Reset dev",()=>act("reset",k)],["Del",()=>confirm("Delete?")&&act("delete",k)]].forEach(([n,f])=>{const b=document.createElement("button");b.className="s";b.textContent=n;b.onclick=f;td.append(b," ")});tb.append(tr)})}
+const esc=s=>String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+async function act(p,key){await api(p,{key});load()}
+async function create(){const r=await api("create",{note:$("note").value,days:$("days").value,maxDevices:$("dev").value,count:$("cnt").value});$("out").textContent=r.keys.join("\n");load()}
+if(T)api("keys").then(r=>r.error?0:init(r));
+</script></body></html>
